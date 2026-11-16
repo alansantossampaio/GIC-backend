@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Repositories\Contracts\AccessManagementInterface;
 
 class PermissionService
 {
+    public function __construct(private AccessManagementInterface $access) {}
     /**
      * Define os acessos disponíveis por perfil/role
      */
@@ -91,11 +93,7 @@ class PermissionService
             return self::getAllFeatures();
         }
 
-        if (!$user->condominiumUsers) {
-            $user->load('condominiumUsers.role');
-        }
-
-        $memberships = $user->condominiumUsers;
+        $memberships = $this->access->membershipsWithRoles($user);
 
         if ($condominiumId) {
             $memberships = $memberships->where('condominium_id', $condominiumId);
@@ -143,7 +141,7 @@ class PermissionService
             return true;
         }
 
-        $roles = $user->condominiumUsers
+        $roles = $this->access->membershipsWithRoles($user)
             ->map(fn ($m) => str_replace('í', 'i', mb_strtolower(trim($m->role->name))))
             ->unique();
 

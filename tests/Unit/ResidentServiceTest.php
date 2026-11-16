@@ -7,6 +7,7 @@ use App\Models\Resident;
 use App\Models\Unit;
 use App\Models\User;
 use App\Repositories\Core\ResidentRepository;
+use App\Repositories\Core\StructureRepository;
 use App\Services\ResidentService;
 use App\Services\StructureService;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +24,7 @@ class ResidentServiceTest extends TestCase
 
     public function test_structure_service_initialization(): void
     {
-        $service = new StructureService();
+        $service = new StructureService(new StructureRepository());
 
         $this->assertNotNull($service);
     }

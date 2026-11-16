@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Condominium;
 use App\Models\Employee;
 use App\Services\CondominiumManagementAccess;
+use App\Services\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -13,24 +14,21 @@ use UnexpectedValueException;
 
 class EmployeeController extends Controller
 {
-    public function __construct(private CondominiumManagementAccess $managementAccess) {}
+    public function __construct(
+        private CondominiumManagementAccess $managementAccess,
+        private EmployeeService $employees,
+    ) {}
 
     public function condominiums(Request $request): JsonResponse
     {
-        $condominiums = Condominium::where('status', 'active')->orderBy('name')->get(['id', 'name', 'status']);
-
-        return response()->json($condominiums->filter(fn ($condominium) => $this->managementAccess->canManage($request->user(), $condominium))->values());
+        return response()->json($this->managementAccess->availableTo($request->user()));
     }
 
     public function index(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
         $filter = $request->validate(['type' => ['sometimes', Rule::in(['own', 'third-party'])]]);
-        $query = $condominium->employees()->orderBy('name');
-        if (isset($filter['type'])) {
-            $query->where('employment_type', $filter['type'] === 'own' ? 'direct' : 'contracted');
-        }
-        $employees = $query->get();
+        $employees = $this->employees->listForCondominium($condominium, $filter['type'] ?? null);
 
         return response()->json($employees->map(fn (Employee $employee) => $this->serialize($employee)));
     }
@@ -38,7 +36,7 @@ class EmployeeController extends Controller
     public function store(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
-        $employee = $condominium->employees()->create($this->validated($request, $condominium));
+        $employee = $this->employees->create($condominium, $this->validated($request, $condominium));
 
         return response()->json($this->serialize($employee), 201);
     }
@@ -46,8 +44,8 @@ class EmployeeController extends Controller
     public function update(Request $request, Condominium $condominium, Employee $employee): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
-        $this->authorizeEmployee($condominium, $employee);
-        $employee->update($this->validated($request, $condominium));
+        $this->employees->ensureBelongsToCondominium($condominium, $employee);
+        $employee = $this->employees->update($employee, $this->validated($request, $condominium));
 
         return response()->json($this->serialize($employee));
     }
@@ -55,8 +53,8 @@ class EmployeeController extends Controller
     public function destroy(Request $request, Condominium $condominium, Employee $employee): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
-        $this->authorizeEmployee($condominium, $employee);
-        $employee->delete();
+        $this->employees->ensureBelongsToCondominium($condominium, $employee);
+        $this->employees->delete($employee);
 
         return response()->json(['message' => 'Funcionário excluído.']);
     }
@@ -64,11 +62,6 @@ class EmployeeController extends Controller
     private function authorizeCondominium(Request $request, Condominium $condominium): void
     {
         abort_unless($this->managementAccess->canManage($request->user(), $condominium), 403);
-    }
-
-    private function authorizeEmployee(Condominium $condominium, Employee $employee): void
-    {
-        abort_unless((int) $employee->condominium_id === $condominium->id, 404);
     }
 
     private function validated(Request $request, Condominium $condominium): array
@@ -88,12 +81,6 @@ class EmployeeController extends Controller
             'cpf.regex' => 'Informe o CPF com 11 dígitos, com ou sem pontuação.',
             'company_id.exists' => 'A empresa informada não está vinculada a este condomínio.',
         ]);
-
-        $data['employment_type'] = $data['type'] === 'own' ? 'direct' : 'contracted';
-        unset($data['type']);
-        foreach (['email', 'phone', 'company_id', 'department', 'hire_date'] as $field) {
-            $data[$field] = $data[$field] ?? null;
-        }
 
         return $data;
     }

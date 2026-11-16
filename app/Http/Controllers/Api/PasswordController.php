@@ -5,16 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\PasswordLink;
-use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Auth\Events\Verified;
+use App\Services\AuthenticationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
 
 class PasswordController extends Controller
 {
+    public function __construct(private AuthenticationService $authentication) {}
+
     public function requestLink(Request $request): JsonResponse
     {
         abort_unless($request->hasSession(), 403, 'Origem não autorizada.');
@@ -40,16 +40,7 @@ class PasswordController extends Controller
         ]);
 
         $status = Password::reset($credentials, function (User $user, string $password): void {
-            $verified = $user->hasVerifiedEmail();
-            $user->forceFill([
-                'password' => $password,
-                'remember_token' => Str::random(60),
-                'email_verified_at' => $user->email_verified_at ?? now(),
-            ])->save();
-            event(new PasswordReset($user));
-            if (! $verified) {
-                event(new Verified($user));
-            }
+            $this->authentication->resetPassword($user, $password);
         });
 
         if ($status !== Password::PASSWORD_RESET) {

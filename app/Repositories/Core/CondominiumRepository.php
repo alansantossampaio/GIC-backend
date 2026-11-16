@@ -19,6 +19,22 @@ class CondominiumRepository implements CondominiumInterface
         return $query->orderBy('name')->get(['id', 'name', 'document', 'status']);
     }
 
+    public function activeForManagement(): Collection
+    {
+        return Condominium::where('status', 'active')->orderBy('name')->get(['id', 'name', 'status']);
+    }
+
+    public function hasManagementMembership(User $user, Condominium $condominium): bool
+    {
+        return $user->condominiumUsers()->current()
+            ->where('condominium_id', $condominium->id)
+            ->with('role')
+            ->get()
+            ->contains(fn ($membership) => in_array(mb_strtolower(trim($membership->role->name)), [
+                'admin', 'administrador', 'síndico', 'sindico',
+            ], true));
+    }
+
     public function hasEditableAccess(User $user, Condominium $condominium): bool
     {
         return Condominium::editableBy($user)->whereKey($condominium->id)->exists();

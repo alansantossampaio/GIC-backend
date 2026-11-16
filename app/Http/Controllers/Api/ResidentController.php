@@ -5,14 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Condominium;
 use App\Models\UnitResident;
-use App\Models\User;
 use App\Services\CondominiumManagementAccess;
 use App\Services\ResidentService;
 use App\Services\StructureService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class ResidentController extends Controller
 {
@@ -29,22 +27,15 @@ class ResidentController extends Controller
 
     public function condominiums(Request $request): JsonResponse
     {
-        $condominiums = Condominium::where('status', 'active')->orderBy('name')->get(['id', 'name', 'status']);
-
-        return response()->json($condominiums->filter(fn ($condominium) => $this->managementAccess->canManage($request->user(), $condominium))->values());
+        return response()->json($this->managementAccess->availableTo($request->user()));
     }
 
     public function index(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
 
-        $users = User::query()->orderBy('name');
-        if (! $request->user()->can('manage-access')) {
-            $users->whereHas('condominiumUsers', fn ($query) => $query->current()->where('condominium_id', $condominium->id));
-        }
-
         return response()->json([
-            'users' => $users->get(['id', 'name', 'email']),
+            'users' => $this->residentService->availableUsers($request->user(), $condominium),
             'blocks' => $this->structureService->getBlocks($condominium),
             'units' => $this->structureService->getUnits($condominium),
             'residents' => $this->residentService->getResidents($condominium),
@@ -87,34 +78,20 @@ class ResidentController extends Controller
             'start_date' => ['required', 'date_format:Y-m-d'],
         ]);
 
-        $user = User::whereKey($data['user_id'])->firstOrFail();
-        if (! $request->user()->can('manage-access') && ! $user->condominiumUsers()->current()->where('condominium_id', $condominium->id)->exists()) {
-            throw ValidationException::withMessages(['user_id' => ['O usuário não possui vínculo ativo com este condomínio.']]);
-        }
-
-        $link = $this->residentService->createResident($user, $data);
-
-        return response()->json($link->load(['resident.user:id,name,email', 'unit.block:id,name']), 201);
-    }
-
-    private function link(Condominium $condominium, UnitResident $link): UnitResident
-    {
-        abort_unless($link->unit()->where('condominium_id', $condominium->id)->exists() && $link->status === 'active' && $link->end_date === null, 404);
-
-        return $link;
+        return response()->json($this->residentService->createForCondominium($request->user(), $condominium, $data), 201);
     }
 
     public function show(Request $request, Condominium $condominium, UnitResident $link): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
 
-        return response()->json($this->link($condominium, $link)->load(['resident.user:id,name,email', 'unit.block:id,name']));
+        return response()->json($this->residentService->showLink($condominium, $link));
     }
 
     public function update(Request $request, Condominium $condominium, UnitResident $link): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
-        $this->link($condominium, $link);
+        $this->residentService->scopedLink($condominium, $link);
 
         $data = $request->validate([
             'document' => ['required', 'string', 'max:255'],
@@ -123,16 +100,13 @@ class ResidentController extends Controller
             'start_date' => ['required', 'date_format:Y-m-d'],
         ]);
 
-        $resident = $link->resident;
-        $updated = $this->residentService->updateResident($resident, $link, $data);
-
-        return response()->json($updated->load(['resident.user:id,name,email', 'unit.block:id,name']));
+        return response()->json($this->residentService->updateLink($link, $data));
     }
 
     public function destroy(Request $request, Condominium $condominium, UnitResident $link): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
-        $this->link($condominium, $link);
+        $this->residentService->scopedLink($condominium, $link);
 
         $this->residentService->deleteResident($link);
 

@@ -8,12 +8,35 @@ use App\Models\Resident;
 use App\Models\Role;
 use App\Models\Unit;
 use App\Models\User;
+use App\Repositories\Contracts\CondominiumInterface;
+use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ResidentTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_management_lists_use_the_condominium_repository(): void
+    {
+        $admin = User::factory()->create(['email' => User::SYSTEM_ADMIN_EMAIL]);
+        $admin->forceFill(['is_system_admin' => true])->save();
+        $condominium = new Condominium(['name' => 'A', 'status' => 'active']);
+        $condominium->id = 42;
+        $repository = $this->mock(CondominiumInterface::class);
+        $repository->shouldReceive('activeForManagement')->twice()
+            ->andReturn(new \Illuminate\Database\Eloquent\Collection([$condominium]));
+
+        $this->actingAs($admin, 'web')->getJson('/api/resident-condominiums')->assertOk()->assertJsonPath('0.id', 42);
+        $this->getJson('/api/employee-condominiums')->assertOk()->assertJsonPath('0.id', 42);
+    }
+
+    public function test_user_service_resolves_its_repository_contract(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertTrue(app(UserService::class)->getAllUsers()->contains('id', $user->id));
+    }
 
     private function condominium(string $name): Condominium
     {

@@ -4,8 +4,12 @@ namespace App\Repositories\Contracts;
 
 use App\Models\User;
 
-interface UserInterface extends BaseInterface
+interface UserInterface
 {
+    public function all();
+
+    public function find($id);
+
     public function create(array $data);
 
     public function findById($id);

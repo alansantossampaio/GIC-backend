@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class SessionController extends Controller
 {
+    public function __construct(private PermissionService $permissions) {}
+
     public function login(Request $request): JsonResponse
     {
         if (! $request->hasSession()) {
@@ -46,11 +48,9 @@ class SessionController extends Controller
     public function permissions(Request $request): JsonResponse
     {
         $user = $request->user();
-        $permissionService = new PermissionService();
-
         return response()->json([
-            'features' => $permissionService->getAccessibleFeatures($user),
-            'is_admin' => $permissionService->isAdmin($user),
+            'features' => $this->permissions->getAccessibleFeatures($user),
+            'is_admin' => $this->permissions->isAdmin($user),
         ]);
     }
 

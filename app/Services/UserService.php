@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Repositories\Core\UserRepository;
+use App\Repositories\Contracts\UserInterface;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\WelcomeMail;
@@ -12,7 +12,7 @@ class UserService
 {
     protected $userRepository;
 
-    public function __construct(UserRepository $userRepository)
+    public function __construct(UserInterface $userRepository)
     {
         $this->userRepository = $userRepository;
     }

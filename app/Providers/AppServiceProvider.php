@@ -21,6 +21,12 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(CondominiumInterface::class, CondominiumRepository::class);
         $this->app->bind(\App\Repositories\Contracts\ResidentInterface::class, \App\Repositories\Core\ResidentRepository::class);
+        $this->app->bind(\App\Repositories\Contracts\StructureInterface::class, \App\Repositories\Core\StructureRepository::class);
+        $this->app->bind(\App\Repositories\Contracts\EmployeeInterface::class, \App\Repositories\Core\EmployeeRepository::class);
+        $this->app->bind(\App\Repositories\Contracts\AccessManagementInterface::class, \App\Repositories\Core\AccessManagementRepository::class);
+        $this->app->bind(\App\Repositories\Contracts\NotificationInterface::class, \App\Repositories\Core\NotificationRepository::class);
+        $this->app->bind(\App\Repositories\Contracts\AuthenticationInterface::class, \App\Repositories\Core\AuthenticationRepository::class);
+        $this->app->bind(\App\Repositories\Contracts\UserInterface::class, \App\Repositories\Core\UserRepository::class);
     }
 
     /**

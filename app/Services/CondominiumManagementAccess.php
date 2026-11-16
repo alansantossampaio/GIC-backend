@@ -4,9 +4,20 @@ namespace App\Services;
 
 use App\Models\Condominium;
 use App\Models\User;
+use App\Repositories\Contracts\CondominiumInterface;
+use Illuminate\Database\Eloquent\Collection;
 
 class CondominiumManagementAccess
 {
+    public function __construct(private CondominiumInterface $condominiums) {}
+
+    public function availableTo(User $user): Collection
+    {
+        return $this->condominiums->activeForManagement()
+            ->filter(fn (Condominium $condominium) => $this->canManage($user, $condominium))
+            ->values();
+    }
+
     public function canManage(User $user, Condominium $condominium): bool
     {
         if ($condominium->status !== 'active') {
@@ -17,12 +28,6 @@ class CondominiumManagementAccess
             return true;
         }
 
-        return $user->condominiumUsers()->current()
-            ->where('condominium_id', $condominium->id)
-            ->with('role')
-            ->get()
-            ->contains(fn ($membership) => in_array(mb_strtolower(trim($membership->role->name)), [
-                'admin', 'administrador', 'síndico', 'sindico',
-            ], true));
+        return $this->condominiums->hasManagementMembership($user, $condominium);
     }
 }

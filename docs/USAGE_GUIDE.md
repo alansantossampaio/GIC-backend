@@ -386,7 +386,7 @@ public function create(User $user, array $data): UnitResident
 // ❌ Ruim (queries no service)
 public function create(array $data): UnitResident
 {
-    User::find($data['user_id']); // Faça no controller
+    User::find($data['user_id']); // Faça no repository
 }
 ```
 

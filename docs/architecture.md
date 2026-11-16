@@ -114,7 +114,7 @@ Diretrizes:
 - Policies autorizam operações.
 - Events/Listeners desacoplam reações a fatos de negócio.
 - Jobs/Queues processam tarefas demoradas, como e-mails e notificações.
-- Para o cadastro de condomínios, seguir a separação Controller, Service e Repository.
+- Para os módulos do backend, seguir Controller → Service → Repository: consultas e persistência de aplicação ficam nos repositórios; regras de negócio e transações ficam nos services. Controllers tratam HTTP, validação e autorização. O Laravel continua responsável pelo binding de modelos, validações `exists`/`unique` e mecanismos de autenticação.
 
 ## 4. Módulos e entidades
 
