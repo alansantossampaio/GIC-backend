@@ -4,6 +4,8 @@
 **Stack prevista:** PHP 8.5, Laravel 13  
 **Modelo:** aplicação multi-tenant com vários condomínios na mesma instalação.
 
+O frontend é uma SPA React/Vite. A build fica em `public/frontend/`; o Laravel entrega o arquivo inicial em `/`, `/auth/*` e `/admin/*`, enquanto API e Sanctum permanecem na mesma origem. O diretório `public` do Laravel é a raiz do servidor web.
+
 > Este documento registra decisões já tomadas e recomendações. Os itens marcados como pendentes precisam ser confirmados antes de migrations definitivas.
 
 ## 1. Objetivos

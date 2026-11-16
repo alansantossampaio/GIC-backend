@@ -20,6 +20,12 @@ class CondominiumController extends Controller
         return response()->json($this->condominiums->availableTo($request->user()));
     }
 
+    /**
+     * Exibe os detalhes de um condomínio específico
+     *
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function show(Condominium $condominium): JsonResponse
     {
         Gate::authorize('view', $condominium);
@@ -27,6 +33,12 @@ class CondominiumController extends Controller
         return response()->json($condominium->only(['id', 'name', 'document', 'status']));
     }
 
+    /**
+     * Cria um novo condomínio
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
     public function store(Request $request): JsonResponse
     {
         Gate::authorize('create', Condominium::class);
@@ -35,6 +47,13 @@ class CondominiumController extends Controller
         return response()->json($condominium, 201);
     }
 
+    /**
+     * Atualiza os detalhes de um condomínio específico
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function update(Request $request, Condominium $condominium): JsonResponse
     {
         Gate::authorize('update', $condominium);
@@ -42,6 +61,13 @@ class CondominiumController extends Controller
         return response()->json($this->condominiums->update($condominium, $this->validated($request)));
     }
 
+    /**
+     * Altera o status de um condomínio específico
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function changeStatus(Request $request, Condominium $condominium): JsonResponse
     {
         Gate::authorize('changeStatus', $condominium);

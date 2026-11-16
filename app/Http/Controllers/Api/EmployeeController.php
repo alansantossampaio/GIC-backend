@@ -24,6 +24,13 @@ class EmployeeController extends Controller
         return response()->json($this->managementAccess->availableTo($request->user()));
     }
 
+    /**
+     * Lista os funcionários de um condomínio específico
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function index(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -33,6 +40,13 @@ class EmployeeController extends Controller
         return response()->json($employees->map(fn (Employee $employee) => $this->serialize($employee)));
     }
 
+    /**
+     * Cria um novo funcionário para o condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function store(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -41,6 +55,14 @@ class EmployeeController extends Controller
         return response()->json($this->serialize($employee), 201);
     }
 
+    /**
+     * Atualiza os detalhes de um funcionário específico do condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @param Employee $employee
+     * @return JsonResponse
+     */
     public function update(Request $request, Condominium $condominium, Employee $employee): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -50,6 +72,14 @@ class EmployeeController extends Controller
         return response()->json($this->serialize($employee));
     }
 
+    /**
+     * Exclui um funcionário específico do condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @param Employee $employee
+     * @return JsonResponse
+     */
     public function destroy(Request $request, Condominium $condominium, Employee $employee): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -59,6 +89,28 @@ class EmployeeController extends Controller
         return response()->json(['message' => 'Funcionário excluído.']);
     }
 
+    /**
+     * Exibe os detalhes de um funcionário específico do condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @param Employee $employee
+     * @return JsonResponse
+     */
+    public function show(Request $request, Condominium $condominium, Employee $employee): JsonResponse
+    {
+        $this->authorizeCondominium($request, $condominium);
+        $this->employees->ensureBelongsToCondominium($condominium, $employee);
+
+        return response()->json($this->serialize($employee));
+    }
+    /**
+     * Valida os dados de um funcionário para criação ou atualização
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return array
+     */
     private function authorizeCondominium(Request $request, Condominium $condominium): void
     {
         abort_unless($this->managementAccess->canManage($request->user(), $condominium), 403);
@@ -85,6 +137,12 @@ class EmployeeController extends Controller
         return $data;
     }
 
+    /**
+     * Serializa os dados de um funcionário para resposta JSON
+     *
+     * @param Employee $employee
+     * @return array
+     */
     private function serialize(Employee $employee): array
     {
         $type = match ($employee->employment_type) {

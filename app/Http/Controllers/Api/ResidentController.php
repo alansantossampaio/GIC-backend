@@ -20,6 +20,13 @@ class ResidentController extends Controller
         private CondominiumManagementAccess $managementAccess,
     ) {}
 
+    /**
+     * Autoriza o acesso ao condomínio para o usuário atual
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return void
+     */
     private function authorizeCondominium(Request $request, Condominium $condominium): void
     {
         abort_unless($this->managementAccess->canManage($request->user(), $condominium), 403);
@@ -30,6 +37,13 @@ class ResidentController extends Controller
         return response()->json($this->managementAccess->availableTo($request->user()));
     }
 
+    /**
+     * Exibe os usuários, blocos, unidades e residentes disponíveis para o condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function index(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -42,6 +56,13 @@ class ResidentController extends Controller
         ]);
     }
 
+    /**
+     * Cria um novo bloco para o condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function storeBlock(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -53,6 +74,13 @@ class ResidentController extends Controller
         return response()->json($this->structureService->createBlock($condominium, $data), 201);
     }
 
+    /**
+     * Cria uma nova unidade para o condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function storeUnit(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -65,6 +93,13 @@ class ResidentController extends Controller
         return response()->json($this->structureService->createUnit($condominium, $data), 201);
     }
 
+    /**
+     * Cria um novo residente para o condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @return JsonResponse
+     */
     public function store(Request $request, Condominium $condominium): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -81,6 +116,14 @@ class ResidentController extends Controller
         return response()->json($this->residentService->createForCondominium($request->user(), $condominium, $data), 201);
     }
 
+    /**
+     * Exibe os detalhes de um residente específico do condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @param UnitResident $link
+     * @return JsonResponse
+     */
     public function show(Request $request, Condominium $condominium, UnitResident $link): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -88,6 +131,14 @@ class ResidentController extends Controller
         return response()->json($this->residentService->showLink($condominium, $link));
     }
 
+    /**
+     * Atualiza os detalhes de um residente específico do condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @param UnitResident $link
+     * @return JsonResponse
+     */
     public function update(Request $request, Condominium $condominium, UnitResident $link): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -103,6 +154,14 @@ class ResidentController extends Controller
         return response()->json($this->residentService->updateLink($link, $data));
     }
 
+    /**
+     * Exclui um residente específico do condomínio
+     *
+     * @param Request $request
+     * @param Condominium $condominium
+     * @param UnitResident $link
+     * @return JsonResponse
+     */
     public function destroy(Request $request, Condominium $condominium, UnitResident $link): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);

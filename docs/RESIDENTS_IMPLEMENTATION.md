@@ -72,7 +72,7 @@ DELETE /api/condominiums/{condominium}/residents/{link}
 
 ---
 
-### Frontend (Next.js 16 + TypeScript)
+### Frontend (React/Vite + TypeScript)
 
 #### 1. **Serviço de API**
 
@@ -156,7 +156,7 @@ DELETE /api/condominiums/{condominium}/residents/{link}
 - Banco: Multi-tenant por condomínio
 
 ### Frontend
-- Next.js 16
+- React/Vite
 - TypeScript 5
 - Tailwind CSS 4
 - Tipagem em runtime

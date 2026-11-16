@@ -431,4 +431,4 @@ public function create(array $data): Resident
 - [Laravel Service Provider](https://laravel.com/docs/13.x/providers)
 - [Repository Pattern](https://refactoring.guru/design-patterns/repository)
 - [Multi-tenancy em Laravel](https://laravel.com/docs/13.x/eloquent-relationships)
-- [Next.js Data Fetching](https://nextjs.org/docs/app/building-your-application/data-fetching)
+- [React](https://react.dev/learn)
