@@ -18,7 +18,7 @@ class UserService
     }
 
     /**
-     * Summary of createUser a new user
+     * Cria um usuário a partir dos dados fornecidos
      *
      * @param array $data
      * @return User|\Illuminate\Database\Eloquent\Model
@@ -39,7 +39,7 @@ class UserService
     }
 
     /**
-     * Summary of updateUser an existing user by ID
+     * Atualiza um usuário existente pelo ID
      *
      * @param int $id
      * @param array $data
@@ -51,7 +51,7 @@ class UserService
     }
 
     /**
-     * Summary of deleteUser a user by ID
+     * Remove um usuário pelo ID
      *
      * @param int $id
      * @return bool
@@ -62,7 +62,7 @@ class UserService
     }
 
     /**
-     * Summary of getUser a single user by ID
+     * Retorna um usuário específico pelo ID
      *
      * @param int $id
      * @return User|\Illuminate\Database\Eloquent\Model
@@ -73,7 +73,7 @@ class UserService
     }
 
     /**
-     * Summary of getAllUsers all users
+     * Retorna todos os usuários
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
@@ -83,7 +83,7 @@ class UserService
     }
 
     /**
-     * Summary of getUserByEmail a single user by email
+     * Retorna um usuário específico pelo email
      *
      * @param string $email
      * @return User|\Illuminate\Database\Eloquent\Model
@@ -94,7 +94,7 @@ class UserService
     }
 
     /**
-     * Summary of getUserByPhone a single user by phone
+     * Retorna um usuário específico pelo telefone
      *
      * @param string $phone
      * @return User|\Illuminate\Database\Eloquent\Model

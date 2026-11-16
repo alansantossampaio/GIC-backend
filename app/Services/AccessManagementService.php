@@ -24,6 +24,11 @@ class AccessManagementService
         return $this->access->overview();
     }
 
+    /**
+     * Convida um usuário para acessar o sistema
+     * @param array $data
+     * @return User
+     */
     public function invite(array $data): User
     {
         return DB::transaction(function () use ($data) {
@@ -48,21 +53,42 @@ class AccessManagementService
         });
     }
 
+    /**
+     * Cria uma nova função (role) no sistema
+     * @param array $data
+     * @return Role
+     */
     public function createRole(array $data): Role
     {
         return $this->access->createRole($data + ['guard_name' => 'web']);
     }
 
+    /**
+     * Cria uma nova permissão no sistema
+     * @param array $data
+     * @return Permission
+     */
     public function createPermission(array $data): Permission
     {
         return $this->access->createPermission($data);
     }
 
+    /**
+     * Atualiza as permissões de uma função (role) específica
+     * @param Role $role
+     * @param array $permissionIds
+     * @return Role
+     */
     public function updateRolePermissions(Role $role, array $permissionIds): Role
     {
         return $this->access->syncRolePermissions($role, $permissionIds);
     }
 
+    /**
+     * Concede acesso a um usuário para um condomínio específico
+     * @param array $data
+     * @return CondominiumUser
+     */
     public function grant(array $data): CondominiumUser
     {
         return DB::transaction(function () use ($data) {
@@ -82,6 +108,11 @@ class AccessManagementService
         });
     }
 
+    /**
+     * Revoga o acesso de um usuário a um condomínio específico
+     * @param CondominiumUser $membership
+     * @return bool
+     */
     public function revoke(CondominiumUser $membership): bool
     {
         if ($membership->status !== 'active') {
@@ -93,6 +124,11 @@ class AccessManagementService
         return true;
     }
 
+    /**
+     * Retorna os acessos atuais de um usuário
+     * @param User $user
+     * @return Collection
+     */
     public function currentAccess(User $user): Collection
     {
         return $this->access->currentAccess($user);

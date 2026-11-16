@@ -15,16 +15,34 @@ class ResidentService
 {
     public function __construct(private ResidentInterface $residents) {}
 
+    /**
+     * Retorna os moradores de um condomínio específico
+     * @param Condominium $condominium
+     * @return Collection
+     */
     public function getResidents(Condominium $condominium): Collection
     {
         return $this->residents->getResidents($condominium);
     }
 
+    /**
+     * Retorna os usuários disponíveis para vinculação a um condomínio específico
+     * @param User $actor
+     * @param Condominium $condominium
+     * @return Collection
+     */
     public function availableUsers(User $actor, Condominium $condominium): Collection
     {
         return $this->residents->availableUsers($condominium, $actor->can('manage-access'));
     }
 
+    /**
+     * Cria um vínculo de morador para um condomínio específico
+     * @param User $actor
+     * @param Condominium $condominium
+     * @param array $data
+     * @return UnitResident
+     */
     public function createForCondominium(User $actor, Condominium $condominium, array $data): UnitResident
     {
         $user = $this->residents->findUser($data['user_id']);
@@ -35,6 +53,12 @@ class ResidentService
         return $this->residents->loadLink($this->createResident($user, $data));
     }
 
+    /**
+     * Retorna um vínculo de morador específico, garantindo que pertence ao condomínio e está ativo
+     * @param Condominium $condominium
+     * @param UnitResident $link
+     * @return UnitResident
+     */
     public function scopedLink(Condominium $condominium, UnitResident $link): UnitResident
     {
         abort_unless($this->residents->linkBelongsToCondominium($link, $condominium) && $link->status === 'active' && $link->end_date === null, 404);
@@ -42,11 +66,23 @@ class ResidentService
         return $link;
     }
 
+    /**
+     * Retorna um vínculo de morador específico, carregando os relacionamentos
+     * @param Condominium $condominium
+     * @param UnitResident $link
+     * @return UnitResident
+     */
     public function showLink(Condominium $condominium, UnitResident $link): UnitResident
     {
         return $this->residents->loadLink($this->scopedLink($condominium, $link));
     }
 
+    /**
+     * Atualiza um vínculo de morador específico
+     * @param UnitResident $link
+     * @param array $data
+     * @return UnitResident
+     */
     public function updateLink(UnitResident $link, array $data): UnitResident
     {
         $updated = $this->updateResident($this->residents->residentForLink($link), $link, $data);
@@ -54,6 +90,12 @@ class ResidentService
         return $this->residents->loadLink($updated);
     }
 
+    /**
+     * Cria um registro de morador e vincula a uma unidade
+     * @param User $user
+     * @param array $data
+     * @return UnitResident
+     */
     public function createResident(User $user, array $data): UnitResident
     {
         return DB::transaction(function () use ($user, $data) {
@@ -84,6 +126,13 @@ class ResidentService
         });
     }
 
+    /**
+     * Atualiza um vínculo de morador existente
+     * @param Resident $resident
+     * @param UnitResident $link
+     * @param array $data
+     * @return UnitResident
+     */
     public function updateResident(Resident $resident, UnitResident $link, array $data): UnitResident
     {
         return DB::transaction(function () use ($resident, $link, $data) {
@@ -107,6 +156,11 @@ class ResidentService
         });
     }
 
+    /**
+     * Remove um vínculo de morador e, se não houver outros registros, o próprio morador
+     * @param UnitResident $link
+     * @return void
+     */
     public function deleteResident(UnitResident $link): void
     {
         DB::transaction(function () use ($link) {

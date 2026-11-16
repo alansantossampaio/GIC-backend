@@ -23,6 +23,11 @@ class CondominiumService
         return $this->condominiums->availableTo($user);
     }
 
+    /**
+     * Cria o condomínio com os dados fornecidos
+     * @param array $data
+     * @return Condominium
+     */
     public function create(array $data): Condominium
     {
         $data = $this->normalizeDocument($data);
@@ -30,6 +35,12 @@ class CondominiumService
         return $this->save(fn () => $this->condominiums->create($data + ['status' => 'active']));
     }
 
+    /**
+     * Atualiza os dados de um condomínio específico
+     * @param Condominium $condominium
+     * @param array $data
+     * @return Condominium
+     */
     public function update(Condominium $condominium, array $data): Condominium
     {
         return DB::transaction(function () use ($condominium, $data) {
@@ -41,6 +52,12 @@ class CondominiumService
         });
     }
 
+    /**
+     * Altera o status de um condomínio específico
+     * @param Condominium $condominium
+     * @param string $status
+     * @return Condominium
+     */
     public function changeStatus(Condominium $condominium, string $status): Condominium
     {
         return DB::transaction(function () use ($condominium, $status) {
@@ -51,6 +68,12 @@ class CondominiumService
         });
     }
 
+    /**
+     * Normaliza o documento (CNPJ) do condomínio
+     * @param array $data
+     * @param int|null $exceptId
+     * @return array
+     */
     private function normalizeDocument(array $data, ?int $exceptId = null): array
     {
         $document = Cnpj::normalize($data['document']);
@@ -66,6 +89,11 @@ class CondominiumService
         return $data;
     }
 
+    /**
+     * Salva as alterações de um condomínio, tratando exceções de banco de dados
+     * @param Closure $operation
+     * @return Condominium
+     */
     private function save(Closure $operation): Condominium
     {
         try {
