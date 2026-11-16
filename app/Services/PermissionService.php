@@ -109,7 +109,7 @@ class PermissionService
         $permissions = collect();
 
         foreach ($roles as $role) {
-            $rolePermissions = self::ROLE_PERMISSIONS[strtolower($role)] ?? self::ROLE_PERMISSIONS['morador'];
+            $rolePermissions = self::ROLE_PERMISSIONS[str_replace('í', 'i', mb_strtolower(trim($role)))] ?? self::ROLE_PERMISSIONS['morador'];
             $permissions = $permissions->merge($rolePermissions);
         }
 
@@ -144,7 +144,7 @@ class PermissionService
         }
 
         $roles = $user->condominiumUsers
-            ->map(fn ($m) => strtolower($m->role->name))
+            ->map(fn ($m) => str_replace('í', 'i', mb_strtolower(trim($m->role->name))))
             ->unique();
 
         return $roles->contains('admin') || 

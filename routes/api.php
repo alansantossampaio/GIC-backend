@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccessManagementController;
 use App\Http\Controllers\Api\CondominiumController;
+use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PasswordController;
 use App\Http\Controllers\Api\ResidentController;
@@ -27,7 +28,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
     Route::get('/resident-condominiums', [ResidentController::class, 'condominiums']);
+    Route::get('/employee-condominiums', [EmployeeController::class, 'condominiums']);
     Route::prefix('condominiums/{condominium}')->group(function () {
+        Route::get('/employees', [EmployeeController::class, 'index']);
+        Route::post('/employees', [EmployeeController::class, 'store']);
+        Route::put('/employees/{employee}', [EmployeeController::class, 'update']);
+        Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy']);
         Route::get('/residents', [ResidentController::class, 'index']);
         Route::post('/blocks', [ResidentController::class, 'storeBlock']);
         Route::post('/units', [ResidentController::class, 'storeUnit']);

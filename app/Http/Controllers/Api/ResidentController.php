@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Condominium;
 use App\Models\UnitResident;
 use App\Models\User;
+use App\Services\CondominiumManagementAccess;
 use App\Services\ResidentService;
 use App\Services\StructureService;
 use Illuminate\Http\JsonResponse;
@@ -18,37 +19,19 @@ class ResidentController extends Controller
     public function __construct(
         private ResidentService $residentService,
         private StructureService $structureService,
+        private CondominiumManagementAccess $managementAccess,
     ) {}
-
-    private function canManage(User $user, Condominium $condominium): bool
-    {
-        if ($condominium->status !== 'active') {
-            return false;
-        }
-
-        if ($user->can('manage-access')) {
-            return true;
-        }
-
-        return $user->condominiumUsers()->current()
-            ->where('condominium_id', $condominium->id)
-            ->with('role')
-            ->get()
-            ->contains(fn ($membership) => in_array(mb_strtolower(trim($membership->role->name)), [
-                'admin', 'administrador', 'síndico', 'sindico',
-            ], true));
-    }
 
     private function authorizeCondominium(Request $request, Condominium $condominium): void
     {
-        abort_unless($this->canManage($request->user(), $condominium), 403);
+        abort_unless($this->managementAccess->canManage($request->user(), $condominium), 403);
     }
 
     public function condominiums(Request $request): JsonResponse
     {
         $condominiums = Condominium::where('status', 'active')->orderBy('name')->get(['id', 'name', 'status']);
 
-        return response()->json($condominiums->filter(fn ($condominium) => $this->canManage($request->user(), $condominium))->values());
+        return response()->json($condominiums->filter(fn ($condominium) => $this->managementAccess->canManage($request->user(), $condominium))->values());
     }
 
     public function index(Request $request, Condominium $condominium): JsonResponse
