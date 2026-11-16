@@ -1,0 +1,192 @@
+---
+title: ERD — Sistema de Gerenciamento de Condomínios
+---
+
+erDiagram
+    USERS ||--o| RESIDENTS : "possui perfil"
+    USERS ||--o{ CONDOMINIUM_USERS : "tem acesso"
+    CONDOMINIUMS ||--o{ CONDOMINIUM_USERS : "autoriza"
+    ROLES ||--o{ CONDOMINIUM_USERS : "define papel"
+
+    CONDOMINIUMS ||--o{ BLOCKS : "possui"
+    CONDOMINIUMS ||--o{ UNITS : "possui"
+    BLOCKS o|--o{ UNITS : "organiza"
+
+    RESIDENTS ||--o{ UNIT_RESIDENTS : "ocupa"
+    UNITS ||--o{ UNIT_RESIDENTS : "tem ocupantes"
+
+    COMPANIES ||--o{ COMPANY_CONDOMINIUMS : "presta serviços"
+    CONDOMINIUMS ||--o{ COMPANY_CONDOMINIUMS : "contrata"
+    COMPANIES ||--o{ EMPLOYEES : "emprega"
+    CONDOMINIUMS o|--o{ EMPLOYEES : "contrata diretamente"
+    USERS o|--o| EMPLOYEES : "pode acessar"
+
+    CONDOMINIUMS ||--o{ OCCURRENCES : "registra"
+    UNITS o|--o{ OCCURRENCES : "relaciona"
+    RESIDENTS o|--o{ OCCURRENCES : "envolve"
+    OCCURRENCES ||--o| FINES : "pode originar"
+    OCCURRENCES ||--o| WARNINGS : "pode originar"
+
+    CONDOMINIUMS ||--o{ COMMON_AREAS : "possui"
+    COMMON_AREAS ||--o{ RESERVATIONS : "recebe"
+    RESIDENTS ||--o{ RESERVATIONS : "solicita"
+
+    CONDOMINIUMS ||--o{ SERVICE_ORDERS : "abre"
+    COMPANY_CONDOMINIUMS o|--o{ SERVICE_ORDERS : "executa"
+
+    CONDOMINIUMS ||--o{ FINANCIAL_CATEGORIES : "define"
+    CONDOMINIUMS ||--o{ FINANCIAL_TRANSACTIONS : "registra"
+    FINANCIAL_CATEGORIES ||--o{ FINANCIAL_TRANSACTIONS : "classifica"
+    UNITS o|--o{ FINANCIAL_TRANSACTIONS : "pode ser referência"
+    FINANCIAL_TRANSACTIONS ||--o{ FINANCIAL_PAYMENTS : "recebe"
+
+    USERS {
+        bigint id PK
+        string name
+        string email UK
+        string password
+        timestamp email_verified_at
+    }
+    ROLES {
+        bigint id PK
+        string name
+        string guard_name
+    }
+    CONDOMINIUMS {
+        bigint id PK
+        string name
+        string document
+        string status
+    }
+    CONDOMINIUM_USERS {
+        bigint id PK
+        bigint condominium_id FK
+        bigint user_id FK
+        bigint role_id FK
+        string status
+        datetime started_at
+        datetime ended_at
+    }
+    BLOCKS {
+        bigint id PK
+        bigint condominium_id FK
+        string name
+        string code
+    }
+    UNITS {
+        bigint id PK
+        bigint condominium_id FK
+        bigint block_id FK
+        string number
+        string unit_type
+        string status
+    }
+    RESIDENTS {
+        bigint id PK
+        bigint user_id FK
+        string document
+        string phone
+    }
+    UNIT_RESIDENTS {
+        bigint id PK
+        bigint unit_id FK
+        bigint resident_id FK
+        string relationship_type
+        date start_date
+        date end_date
+        string status
+    }
+    COMPANIES {
+        bigint id PK
+        string name
+        string document UK
+        string status
+    }
+    COMPANY_CONDOMINIUMS {
+        bigint id PK
+        bigint company_id FK
+        bigint condominium_id FK
+        date contract_start
+        date contract_end
+        string status
+        string contract_reference
+    }
+    EMPLOYEES {
+        bigint id PK
+        bigint user_id FK
+        bigint company_id FK
+        bigint condominium_id FK
+        string name
+        string employment_type
+        string status
+    }
+    OCCURRENCES {
+        bigint id PK
+        bigint condominium_id FK
+        bigint unit_id FK
+        bigint resident_id FK
+        bigint reported_by FK
+        string description
+        string status
+        datetime occurred_at
+    }
+    FINES {
+        bigint id PK
+        bigint occurrence_id FK
+        decimal amount
+        date due_date
+        string status
+    }
+    WARNINGS {
+        bigint id PK
+        bigint occurrence_id FK
+        string status
+    }
+    COMMON_AREAS {
+        bigint id PK
+        bigint condominium_id FK
+        string name
+        int capacity
+        string status
+    }
+    RESERVATIONS {
+        bigint id PK
+        bigint common_area_id FK
+        bigint resident_id FK
+        datetime start_at
+        datetime end_at
+        string status
+    }
+    SERVICE_ORDERS {
+        bigint id PK
+        bigint condominium_id FK
+        bigint company_condominium_id FK
+        bigint requested_by FK
+        string description
+        string priority
+        string status
+    }
+    FINANCIAL_CATEGORIES {
+        bigint id PK
+        bigint condominium_id FK
+        string name
+        string type
+    }
+    FINANCIAL_TRANSACTIONS {
+        bigint id PK
+        bigint condominium_id FK
+        bigint category_id FK
+        bigint unit_id FK
+        decimal amount
+        date due_date
+        string direction
+        string status
+    }
+    FINANCIAL_PAYMENTS {
+        bigint id PK
+        bigint transaction_id FK
+        decimal amount
+        datetime paid_at
+        string payment_method
+        string status
+    }

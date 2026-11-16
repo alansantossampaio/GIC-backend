@@ -1,0 +1,60 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Condominium;
+use App\Rules\Cnpj;
+use App\Services\CondominiumService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
+
+class CondominiumController extends Controller
+{
+    public function __construct(private CondominiumService $condominiums) {}
+
+    public function index(Request $request): JsonResponse
+    {
+        return response()->json($this->condominiums->availableTo($request->user()));
+    }
+
+    public function show(Condominium $condominium): JsonResponse
+    {
+        Gate::authorize('view', $condominium);
+
+        return response()->json($condominium->only(['id', 'name', 'document', 'status']));
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        Gate::authorize('create', Condominium::class);
+        $condominium = $this->condominiums->create($this->validated($request));
+
+        return response()->json($condominium, 201);
+    }
+
+    public function update(Request $request, Condominium $condominium): JsonResponse
+    {
+        Gate::authorize('update', $condominium);
+
+        return response()->json($this->condominiums->update($condominium, $this->validated($request)));
+    }
+
+    public function changeStatus(Request $request, Condominium $condominium): JsonResponse
+    {
+        Gate::authorize('changeStatus', $condominium);
+        $data = $request->validate(['status' => ['required', Rule::in(['active', 'inactive'])]]);
+
+        return response()->json($this->condominiums->changeStatus($condominium, $data['status']));
+    }
+
+    private function validated(Request $request): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'document' => ['required', 'string', new Cnpj],
+        ]);
+    }
+}
