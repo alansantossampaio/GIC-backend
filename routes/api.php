@@ -31,11 +31,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
     Route::get('/resident-condominiums', [ResidentController::class, 'condominiums']);
     Route::get('/employee-condominiums', [EmployeeController::class, 'condominiums']);
+    Route::get('/occurrence-condominiums', [OccurrenceController::class, 'condominiums']);
     Route::prefix('condominiums/{condominium}')->group(function () {
+        Route::get('/occurrences/context', [OccurrenceController::class, 'context']);
         Route::get('/occurrences', [OccurrenceController::class, 'index']);
         Route::post('/occurrences', [OccurrenceController::class, 'store']);
         Route::get('/occurrences/{occurrence}', [OccurrenceController::class, 'show'])->whereNumber('occurrence');
         Route::put('/occurrences/{occurrence}', [OccurrenceController::class, 'update'])->whereNumber('occurrence');
+        Route::get('/occurrences/{occurrence}/history', [OccurrenceController::class, 'history'])->whereNumber('occurrence');
         Route::get('/financial-categories', [FinanceController::class, 'categories']);
         Route::post('/financial-categories', [FinanceController::class, 'storeCategory']);
         Route::get('/financial-transactions', [FinanceController::class, 'transactions']);

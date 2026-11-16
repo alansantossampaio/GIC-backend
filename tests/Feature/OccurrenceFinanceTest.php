@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Condominium;
 use App\Models\CondominiumUser;
+use App\Models\Occurrence;
 use App\Models\Resident;
 use App\Models\Role;
 use App\Models\Unit;
@@ -116,5 +117,70 @@ class OccurrenceFinanceTest extends TestCase
         $this->actingAs($manager, 'web');
         $manager->condominiumUsers()->firstOrFail()->update(['ended_at' => now()->subSecond()]);
         $this->getJson("$baseA/financial-categories")->assertForbidden();
+    }
+
+    public function test_resident_can_create_and_edit_only_own_occurrences_with_history(): void
+    {
+        $condominium = $this->condominium('A');
+        $unit = $this->unit($condominium);
+        $otherUnit = $this->unit($condominium);
+        $user = $this->member($condominium, 'Morador');
+        $resident = Resident::create(['user_id' => $user->id, 'document' => '1', 'phone' => '1']);
+        UnitResident::create(['resident_id' => $resident->id, 'unit_id' => $unit->id, 'relationship_type' => 'owner', 'start_date' => now()->subDay()->toDateString(), 'status' => 'active']);
+        $manager = $this->member($condominium);
+        $other = Occurrence::create(['condominium_id' => $condominium->id, 'reported_by' => $manager->id, 'type' => 'complaint', 'description' => 'Privado', 'status' => 'open', 'occurred_at' => now()]);
+        $this->actingAs($user, 'web');
+        $base = "/api/condominiums/{$condominium->id}/occurrences";
+        $data = ['type' => 'complaint', 'description' => 'Ruído', 'occurred_at' => '2026-11-16 10:00:00', 'unit_id' => $unit->id];
+
+        $this->getJson('/api/occurrence-condominiums')->assertOk()->assertJsonCount(1);
+        $this->getJson("$base/context")->assertOk()->assertJsonPath('can_manage', false)->assertJsonCount(1, 'units')->assertJsonPath('units.0.id', $unit->id);
+        $id = $this->postJson($base, $data)->assertCreated()->assertJsonPath('reported_by', $user->id)->assertJsonPath('resident_id', null)->json('id');
+        $this->getJson($base)->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $id);
+        $this->getJson("$base/{$other->id}")->assertNotFound();
+        $this->getJson("$base/{$other->id}/history")->assertNotFound();
+        $this->putJson("$base/{$other->id}", $data)->assertNotFound();
+        $this->postJson($base, array_merge($data, ['unit_id' => $otherUnit->id]))->assertUnprocessable()->assertJsonValidationErrors('unit_id');
+        $this->postJson($base, array_merge($data, ['resident_id' => $resident->id]))->assertUnprocessable()->assertJsonValidationErrors('resident_id');
+        $this->putJson("$base/$id", array_merge($data, ['status' => 'closed']))->assertUnprocessable()->assertJsonValidationErrors('status');
+        $this->putJson("$base/$id", array_merge($data, ['description' => 'Ruído atualizado', 'status' => null, 'resident_id' => null]))->assertOk()->assertJsonPath('status', 'open');
+        $this->getJson("$base/$id/history")->assertOk()->assertJsonCount(2)->assertJsonPath('0.action', 'created')
+            ->assertJsonPath('1.action', 'updated')->assertJsonPath('1.user.id', $user->id)
+            ->assertJsonPath('1.before.description', 'Ruído')->assertJsonPath('1.after.description', 'Ruído atualizado');
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($manager, 'web');
+        $this->putJson("$base/$id", array_merge($data, ['description' => 'Revisada', 'status' => 'closed', 'resident_id' => $resident->id]))->assertOk();
+        $this->getJson("$base/$id/history")->assertOk()->assertJsonCount(3)->assertJsonPath('2.user.id', $manager->id)
+            ->assertJsonPath('2.after.status', 'closed');
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($user, 'web');
+        $this->putJson("$base/$id", array_merge($data, ['resident_id' => null, 'status' => null]))->assertOk()
+            ->assertJsonPath('status', 'closed')->assertJsonPath('resident_id', $resident->id);
+    }
+
+    public function test_resident_access_requires_current_membership_and_current_unit_link(): void
+    {
+        $a = $this->condominium('A');
+        $b = $this->condominium('B');
+        $unit = $this->unit($a);
+        $user = $this->member($a, 'Morador');
+        $resident = Resident::create(['user_id' => $user->id, 'document' => '1', 'phone' => '1']);
+        $link = UnitResident::create(['resident_id' => $resident->id, 'unit_id' => $unit->id, 'relationship_type' => 'owner', 'start_date' => now()->subDay()->toDateString(), 'status' => 'active']);
+        $this->actingAs($user, 'web');
+        $base = "/api/condominiums/{$a->id}/occurrences";
+        $data = ['type' => 'complaint', 'description' => 'Teste', 'occurred_at' => '2026-11-16'];
+
+        $this->getJson("/api/condominiums/{$b->id}/occurrences")->assertForbidden();
+        $link->update(['start_date' => now()->addDay()->toDateString()]);
+        $this->getJson($base)->assertForbidden();
+        $this->postJson($base, $data)->assertForbidden();
+        $this->getJson('/api/occurrence-condominiums')->assertOk()->assertJsonCount(0);
+        $link->update(['start_date' => now()->subDays(2)->toDateString(), 'end_date' => now()->subDay()->toDateString()]);
+        $this->getJson($base)->assertForbidden();
+        $link->update(['end_date' => null]);
+        $user->condominiumUsers()->firstOrFail()->update(['ended_at' => now()->subSecond()]);
+        $this->getJson($base)->assertForbidden();
+        $this->postJson($base, $data)->assertForbidden();
     }
 }
