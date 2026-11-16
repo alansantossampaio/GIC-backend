@@ -39,7 +39,7 @@
 
 ---
 
-## 🎨 Frontend (Next.js/TypeScript)
+## 🎨 Frontend (Vite/TypeScript)
 
 ### Página de Moradores
 - [x] Componente principal criado em `/admin/moradores`
