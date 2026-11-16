@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['condominium_id', 'unit_id', 'resident_id', 'reported_by', 'description', 'status', 'occurred_at'])]
+#[Fillable(['condominium_id', 'unit_id', 'resident_id', 'reported_by', 'type', 'description', 'status', 'occurred_at'])]
 class Occurrence extends Model
 {
     protected function casts(): array

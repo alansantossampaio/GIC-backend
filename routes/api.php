@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\AccessManagementController;
 use App\Http\Controllers\Api\CondominiumController;
 use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\OccurrenceController;
 use App\Http\Controllers\Api\PasswordController;
 use App\Http\Controllers\Api\ResidentController;
 use App\Http\Controllers\Api\SessionController;
@@ -30,6 +32,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/resident-condominiums', [ResidentController::class, 'condominiums']);
     Route::get('/employee-condominiums', [EmployeeController::class, 'condominiums']);
     Route::prefix('condominiums/{condominium}')->group(function () {
+        Route::get('/occurrences', [OccurrenceController::class, 'index']);
+        Route::post('/occurrences', [OccurrenceController::class, 'store']);
+        Route::get('/occurrences/{occurrence}', [OccurrenceController::class, 'show'])->whereNumber('occurrence');
+        Route::put('/occurrences/{occurrence}', [OccurrenceController::class, 'update'])->whereNumber('occurrence');
+        Route::get('/financial-categories', [FinanceController::class, 'categories']);
+        Route::post('/financial-categories', [FinanceController::class, 'storeCategory']);
+        Route::get('/financial-transactions', [FinanceController::class, 'transactions']);
+        Route::post('/financial-transactions', [FinanceController::class, 'storeTransaction']);
+        Route::get('/financial-transactions/{transaction}', [FinanceController::class, 'showTransaction'])->whereNumber('transaction');
+        Route::get('/financial-transactions/{transaction}/payments', [FinanceController::class, 'payments'])->whereNumber('transaction');
+        Route::post('/financial-transactions/{transaction}/payments', [FinanceController::class, 'storePayment'])->whereNumber('transaction');
         Route::get('/employees', [EmployeeController::class, 'index']);
         Route::post('/employees', [EmployeeController::class, 'store']);
         Route::put('/employees/{employee}', [EmployeeController::class, 'update']);

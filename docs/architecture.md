@@ -218,6 +218,18 @@ Somente a conta inicializada como administradora pode convidar usuários, cadast
 
 As permissões cadastradas descrevem os acessos atribuídos; os módulos de negócio ainda devem aplicar essas permissões com policies e validar o condomínio ativo no servidor. A interface não é uma barreira de autorização. A entrega de e-mails depende da configuração do provedor; o driver `log` não entrega mensagens reais.
 
+## Ocorrências e financeiro — API inicial
+
+Os endpoints autenticados são restritos ao administrador da plataforma e aos gestores com vínculo vigente em condomínios ativos, conforme os módulos de moradores e funcionários. Todos os recursos e referências são validados no contexto do condomínio. A migration `2026_11_16_110000_add_type_to_occurrences` deve ser aplicada antes de usar os endpoints de ocorrências.
+
+- `GET` e `POST /api/condominiums/{condominium}/occurrences`; `GET` e `PUT /api/condominiums/{condominium}/occurrences/{occurrence}`.
+- Ocorrências recebem `type` (`complaint`, `denunciation`, `technical_problem`), `description`, `occurred_at` e, opcionalmente, `unit_id` e `resident_id`. O morador deve ter vínculo com o condomínio e, se informada, com a unidade. O autor é o usuário autenticado. O status inicial é `open`; a edição aceita `open`, `in_progress` ou `closed`. Ocorrências antigas podem ter tipo nulo.
+- `GET` e `POST /api/condominiums/{condominium}/financial-categories` cadastram categorias com `name` e `type` (`income` ou `expense`).
+- `GET` e `POST /api/condominiums/{condominium}/financial-transactions`; `GET /api/condominiums/{condominium}/financial-transactions/{transaction}`. O lançamento exige `category_id`, `direction` (igual ao tipo da categoria), `amount` e `due_date`, além de `unit_id` opcional. A resposta inclui `paid_amount` e `balance`.
+- `GET` e `POST /api/condominiums/{condominium}/financial-transactions/{transaction}/payments`. Pagamentos exigem `amount`, `paid_at` e `payment_method`. Valores monetários devem ser strings decimais positivas, com até duas casas, por exemplo `"100.10"`.
+
+Pagamentos são registrados como `completed`; o lançamento passa de `open` para `partial` ou `paid`, conforme o saldo. A transação bloqueia o lançamento durante a validação e a gravação, impedindo pagamentos concorrentes acima do saldo em bancos que suportam bloqueio de linha. Registros históricos não são excluídos por estes endpoints. Estorno, cancelamento, juros, multas, advertências e sua integração financeira não fazem parte desta versão.
+
 ## 13. Cadastro de condomínios
 
 O administrador da plataforma cadastra, inativa e reativa condomínios. Usuários com vínculo vigente e a permissão `condominios.editar` podem consultar e editar somente seus condomínios ativos; o administrador deve cadastrar e atribuir essa permissão na tela de acessos. A inativação preserva os registros e suspende os vínculos enquanto durar; não é possível conceder novos acessos ao condomínio inativo. Outros módulos futuros também deverão verificar a situação e o vínculo no servidor.
