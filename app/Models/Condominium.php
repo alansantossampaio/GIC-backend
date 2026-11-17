@@ -7,10 +7,15 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'document', 'status'])]
+#[Fillable(['name', 'document', 'status', 'unity_qtd'])]
 class Condominium extends Model
 {
     protected $table = 'condominiums';
+
+    protected function casts(): array
+    {
+        return ['unity_qtd' => 'integer'];
+    }
 
     public function scopeEditableBy(Builder $query, User $user): void
     {

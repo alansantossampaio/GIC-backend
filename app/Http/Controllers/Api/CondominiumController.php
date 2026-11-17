@@ -30,7 +30,7 @@ class CondominiumController extends Controller
     {
         Gate::authorize('view', $condominium);
 
-        return response()->json($condominium->only(['id', 'name', 'document', 'status']));
+        return response()->json($condominium->only(['id', 'name', 'document', 'status', 'unity_qtd']));
     }
 
     /**
@@ -42,7 +42,7 @@ class CondominiumController extends Controller
     public function store(Request $request): JsonResponse
     {
         Gate::authorize('create', Condominium::class);
-        $condominium = $this->condominiums->create($this->validated($request));
+        $condominium = $this->condominiums->create($this->validated($request) + ['unity_qtd' => null]);
 
         return response()->json($condominium, 201);
     }
@@ -81,6 +81,7 @@ class CondominiumController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'document' => ['required', 'string', new Cnpj],
+            'unity_qtd' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:2147483647'],
         ]);
     }
 }

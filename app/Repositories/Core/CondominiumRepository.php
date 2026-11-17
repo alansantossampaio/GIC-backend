@@ -21,7 +21,7 @@ class CondominiumRepository implements CondominiumInterface
             $query->editableBy($user);
         }
 
-        return $query->orderBy('name')->get(['id', 'name', 'document', 'status']);
+        return $query->orderBy('name')->get(['id', 'name', 'document', 'status', 'unity_qtd']);
     }
 
     /**

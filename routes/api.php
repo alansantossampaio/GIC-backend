@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AccessManagementController;
 use App\Http\Controllers\Api\CondominiumController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\NotificationController;
@@ -22,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/permissions', [SessionController::class, 'permissions']);
     Route::post('/logout', [SessionController::class, 'logout']);
     Route::get('/my-access', [AccessManagementController::class, 'myAccess']);
+    Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/condominiums', [CondominiumController::class, 'index']);
     Route::post('/condominiums', [CondominiumController::class, 'store']);
     Route::get('/condominiums/{condominium}', [CondominiumController::class, 'show']);

@@ -27,7 +27,8 @@ class CondominiumTest extends TestCase
         $this->actingAs($this->administrator(), 'web');
         $data = ['name' => 'Condomínio A', 'document' => '04.252.011/0001-10'];
         $id = $this->postJson('/api/condominiums', $data)
-            ->assertCreated()->assertJsonPath('document', '04252011000110')->assertJsonPath('status', 'active')->json('id');
+            ->assertCreated()->assertJsonPath('document', '04252011000110')->assertJsonPath('status', 'active')
+            ->assertJsonStructure(['unity_qtd'])->assertJsonPath('unity_qtd', null)->json('id');
         $this->postJson('/api/condominiums', $data)->assertUnprocessable()->assertJsonValidationErrors('document');
         $this->postJson('/api/condominiums', ['name' => 'Inválido', 'document' => '00.000.000/0000-00'])
             ->assertUnprocessable()->assertJsonValidationErrors('document');
@@ -77,6 +78,27 @@ class CondominiumTest extends TestCase
         $a->update(['status' => 'active']);
         $this->getJson('/api/my-access')->assertJsonCount(1);
         $this->getJson('/api/condominiums')->assertJsonCount(1);
+    }
+
+    public function test_unit_quantity_is_validated_saved_and_returned_in_condominium_responses(): void
+    {
+        $this->actingAs($this->administrator(), 'web');
+        $data = ['name' => 'Condomínio A', 'document' => '04.252.011/0001-10', 'unity_qtd' => 100];
+        $id = $this->postJson('/api/condominiums', $data)
+            ->assertCreated()->assertJsonPath('unity_qtd', 100)->json('id');
+        $this->getJson('/api/condominiums')->assertOk()->assertJsonPath('0.unity_qtd', 100);
+        $this->getJson("/api/condominiums/$id")->assertOk()->assertJsonPath('unity_qtd', 100);
+        $this->putJson("/api/condominiums/$id", array_merge($data, ['unity_qtd' => 0]))
+            ->assertOk()->assertJsonPath('unity_qtd', 0);
+        $this->putJson("/api/condominiums/$id", ['name' => $data['name'], 'document' => $data['document']])
+            ->assertOk()->assertJsonPath('unity_qtd', 0);
+        $this->putJson("/api/condominiums/$id", array_merge($data, ['unity_qtd' => null]))
+            ->assertOk()->assertJsonPath('unity_qtd', null);
+        $this->getJson('/api/condominiums')->assertOk()->assertJsonPath('0.unity_qtd', null);
+        foreach ([-1, 1.5, 2147483648, 'abc'] as $quantity) {
+            $this->putJson("/api/condominiums/$id", array_merge($data, ['unity_qtd' => $quantity]))
+                ->assertUnprocessable()->assertJsonValidationErrors('unity_qtd');
+        }
     }
 
     public function test_admin_cannot_grant_access_to_inactive_condominium(): void

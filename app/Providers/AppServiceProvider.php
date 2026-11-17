@@ -20,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(CondominiumInterface::class, CondominiumRepository::class);
+        $this->app->bind(\App\Repositories\Contracts\DashboardInterface::class, \App\Repositories\Core\DashboardRepository::class);
         $this->app->bind(\App\Repositories\Contracts\OccurrenceInterface::class, \App\Repositories\Core\OccurrenceRepository::class);
         $this->app->bind(\App\Repositories\Contracts\FinanceInterface::class, \App\Repositories\Core\FinanceRepository::class);
         $this->app->bind(\App\Repositories\Contracts\ResidentInterface::class, \App\Repositories\Core\ResidentRepository::class);
