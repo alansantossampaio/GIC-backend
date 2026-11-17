@@ -93,7 +93,7 @@ class PermissionService
             return self::getAllFeatures();
         }
 
-        $memberships = $this->access->membershipsWithRoles($user);
+        $memberships = $this->access->currentAccess($user);
 
         if ($condominiumId) {
             $memberships = $memberships->where('condominium_id', $condominiumId);
@@ -141,7 +141,7 @@ class PermissionService
             return true;
         }
 
-        $roles = $this->access->membershipsWithRoles($user)
+        $roles = $this->access->currentAccess($user)
             ->map(fn ($m) => str_replace('í', 'i', mb_strtolower(trim($m->role->name))))
             ->unique();
 

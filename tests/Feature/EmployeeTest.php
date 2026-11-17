@@ -45,11 +45,23 @@ class EmployeeTest extends TestCase
     public function test_manager_can_list_create_update_and_delete_employees(): void
     {
         $condominium = $this->condominium('A');
-        $this->actingAs($this->member($condominium, 'Síndico'), 'web');
+        $otherCondominium = $this->condominium('B');
+        $syndic = $this->member($condominium, 'Síndico');
+        $this->actingAs($syndic, 'web');
         $url = "/api/condominiums/{$condominium->id}/employees";
 
-        $this->assertContains('funcionarios', $this->getJson('/api/user/permissions')->assertOk()->json('features'));
+        $syndicFeatures = $this->getJson('/api/user/permissions')->assertOk()
+            ->assertJsonPath('is_admin', true)->json('features');
+        $this->app['auth']->forgetGuards();
+        $admin = User::factory()->create(['email' => User::SYSTEM_ADMIN_EMAIL]);
+        $admin->forceFill(['is_system_admin' => true])->save();
+        $this->actingAs($admin, 'web');
+        $this->assertSame($this->getJson('/api/user/permissions')->assertOk()->json('features'), $syndicFeatures);
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($syndic, 'web');
         $this->getJson('/api/employee-condominiums')->assertOk()->assertJsonCount(1)->assertJsonPath('0.id', $condominium->id);
+        $this->getJson("/api/condominiums/{$otherCondominium->id}/employees")->assertForbidden();
         $id = $this->postJson($url, $this->data())->assertCreated()
             ->assertJsonPath('type', 'own')->assertJsonPath('hire_date', '2026-01-15')->json('id');
         $this->assertDatabaseHas('employees', ['id' => $id, 'employment_type' => 'direct']);

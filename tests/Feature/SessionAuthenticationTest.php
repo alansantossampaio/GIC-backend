@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Condominium;
+use App\Models\CondominiumUser;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -52,6 +55,36 @@ class SessionAuthenticationTest extends TestCase
     {
         $this->postJson('/api/login', ['email' => 'user@example.com', 'password' => 'secret123'])
             ->assertForbidden();
+    }
+
+    public function test_permissions_only_include_current_active_condominium_memberships(): void
+    {
+        $user = User::factory()->create();
+        $role = Role::create(['name' => 'Síndico', 'guard_name' => 'web']);
+        $condominium = Condominium::create([
+            'name' => 'Condomínio A',
+            'document' => '04252011000110',
+            'status' => 'active',
+        ]);
+        $membership = CondominiumUser::create([
+            'user_id' => $user->id,
+            'condominium_id' => $condominium->id,
+            'role_id' => $role->id,
+            'status' => 'active',
+            'started_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($user, 'web');
+        $permissions = $this->getJson('/api/user/permissions')
+            ->assertOk()
+            ->assertJsonPath('is_admin', true);
+        $this->assertContains('financeiro', $permissions->json('features'));
+
+        $membership->update(['ended_at' => now()->subSecond()]);
+        $this->getJson('/api/user/permissions')
+            ->assertOk()
+            ->assertJsonPath('features', [])
+            ->assertJsonPath('is_admin', false);
     }
 
     public function test_login_is_rate_limited(): void
