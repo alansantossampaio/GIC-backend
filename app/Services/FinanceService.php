@@ -7,9 +7,11 @@ use App\Models\FinancialCategory;
 use App\Models\FinancialPayment;
 use App\Models\FinancialTransaction;
 use App\Repositories\Contracts\FinanceInterface;
+use Brick\Math\BigDecimal;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use UnexpectedValueException;
 
 class FinanceService
 {
@@ -48,13 +50,35 @@ class FinanceService
         return $this->finance->payments($this->findTransaction($condominium, $id));
     }
 
+    public function monthlyHistory(Condominium $condominium): array
+    {
+        $months = [];
+        foreach ($this->finance->completedPayments($condominium) as $payment) {
+            if (! in_array($payment->direction, ['income', 'expense'], true)) {
+                throw new UnexpectedValueException('Tipo de lançamento financeiro inválido.');
+            }
+            $month = $payment->paid_at->copy()->setTimezone('America/Sao_Paulo')->format('Y-m');
+            $months[$month] ??= ['income' => BigDecimal::zero(), 'expense' => BigDecimal::zero()];
+            $months[$month][$payment->direction] = $months[$month][$payment->direction]->plus($payment->amount);
+        }
+
+        krsort($months);
+
+        return array_map(fn ($month, $totals) => [
+            'month' => $month,
+            'income' => $this->formatAmount($totals['income']),
+            'expense' => $this->formatAmount($totals['expense']),
+            'balance' => $this->formatAmount($totals['income']->minus($totals['expense'])),
+        ], array_keys($months), array_values($months));
+    }
+
     public function withBalance(FinancialTransaction $transaction): array
     {
-        $paid = $this->paidCents($transaction);
+        $paid = $this->paidAmount($transaction);
         $data = $transaction->toArray();
         unset($data['payments']);
-        $data['paid_amount'] = $this->formatCents($paid);
-        $data['balance'] = $this->formatCents($this->cents($transaction->amount) - $paid);
+        $data['paid_amount'] = $this->formatAmount($paid);
+        $data['balance'] = $this->formatAmount(BigDecimal::of($transaction->amount)->minus($paid));
 
         return $data;
     }
@@ -69,44 +93,43 @@ class FinanceService
                 throw ValidationException::withMessages(['transaction' => 'Este lançamento não aceita pagamentos.']);
             }
 
-            $paid = $this->paidCents($transaction);
-            $remaining = $this->cents($transaction->amount) - $paid;
-            if ($amount > $remaining) {
+            $paid = $this->paidAmount($transaction);
+            $remaining = BigDecimal::of($transaction->amount)->minus($paid);
+            if ($amount->isGreaterThan($remaining)) {
                 throw ValidationException::withMessages(['amount' => 'O pagamento não pode exceder o saldo do lançamento.']);
             }
 
             $data['status'] = 'completed';
             $payment = $this->finance->createPayment($transaction, $data);
-            $this->finance->updateStatus($transaction, $amount === $remaining ? 'paid' : 'partial');
+            $this->finance->updateStatus($transaction, $amount->isEqualTo($remaining) ? 'paid' : 'partial');
 
             return $payment;
         });
     }
 
-    private function positiveAmount(string $amount): int
+    private function positiveAmount(string $amount): BigDecimal
     {
-        $cents = $this->cents($amount);
-        if ($cents <= 0) {
+        $value = BigDecimal::of($amount);
+        if (! $value->isPositive()) {
             throw ValidationException::withMessages(['amount' => 'O valor deve ser maior que zero.']);
         }
 
-        return $cents;
+        return $value;
     }
 
-    private function cents(string $amount): int
+    private function paidAmount(FinancialTransaction $transaction): BigDecimal
     {
-        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
-
-        return (int) $whole * 100 + (int) str_pad($fraction, 2, '0');
+        return $this->finance->payments($transaction)->reduce(
+            fn (BigDecimal $total, FinancialPayment $payment) => $payment->status === 'completed' ? $total->plus($payment->amount) : $total,
+            BigDecimal::zero()
+        );
     }
 
-    private function paidCents(FinancialTransaction $transaction): int
+    private function formatAmount(BigDecimal $amount): string
     {
-        return $this->finance->payments($transaction)->sum(fn (FinancialPayment $payment) => $payment->status === 'completed' ? $this->cents($payment->amount) : 0);
-    }
+        $formatted = (string) $amount->toScale(4);
+        [$whole, $fraction] = explode('.', $formatted);
 
-    private function formatCents(int $cents): string
-    {
-        return sprintf('%d.%02d', intdiv($cents, 100), $cents % 100);
+        return $whole.'.'.str_pad(rtrim($fraction, '0'), 2, '0');
     }
 }

@@ -7,6 +7,7 @@ use App\Models\FinancialCategory;
 use App\Models\FinancialPayment;
 use App\Models\FinancialTransaction;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\LazyCollection;
 
 interface FinanceInterface
 {
@@ -21,6 +22,8 @@ interface FinanceInterface
     public function createTransaction(Condominium $condominium, array $data): FinancialTransaction;
 
     public function payments(FinancialTransaction $transaction): Collection;
+
+    public function completedPayments(Condominium $condominium): LazyCollection;
 
     public function createPayment(FinancialTransaction $transaction, array $data): FinancialPayment;
 

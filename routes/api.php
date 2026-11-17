@@ -41,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/occurrences/{occurrence}/history', [OccurrenceController::class, 'history'])->whereNumber('occurrence');
         Route::get('/financial-categories', [FinanceController::class, 'categories']);
         Route::post('/financial-categories', [FinanceController::class, 'storeCategory']);
+        Route::get('/financial-history', [FinanceController::class, 'monthlyHistory']);
         Route::get('/financial-transactions', [FinanceController::class, 'transactions']);
         Route::post('/financial-transactions', [FinanceController::class, 'storeTransaction']);
         Route::get('/financial-transactions/{transaction}', [FinanceController::class, 'showTransaction'])->whereNumber('transaction');

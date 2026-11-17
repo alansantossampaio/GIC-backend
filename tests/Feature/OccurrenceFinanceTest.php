@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Condominium;
 use App\Models\CondominiumUser;
+use App\Models\FinancialPayment;
 use App\Models\Occurrence;
 use App\Models\Resident;
 use App\Models\Role;
@@ -81,7 +82,100 @@ class OccurrenceFinanceTest extends TestCase
         $this->postJson("$url/$id/payments", $payment)->assertUnprocessable();
         $this->postJson($url, array_merge($transaction, ['direction' => 'expense']))->assertUnprocessable()->assertJsonValidationErrors('category_id');
         $this->postJson($url, array_merge($transaction, ['direction' => ['income']]))->assertUnprocessable()->assertJsonValidationErrors('direction');
-        $this->postJson($url, array_merge($transaction, ['amount' => '100.001']))->assertUnprocessable()->assertJsonValidationErrors('amount');
+        $this->postJson($url, array_merge($transaction, ['amount' => '100.00001']))->assertUnprocessable()->assertJsonValidationErrors('amount');
+    }
+
+    public function test_financial_history_groups_completed_payments_by_month_and_condominium(): void
+    {
+        $a = $this->condominium('A');
+        $b = $this->condominium('B');
+        $manager = $this->member($a);
+        $this->actingAs($manager, 'web');
+        $base = "/api/condominiums/{$a->id}";
+        $history = "$base/financial-history";
+        $this->getJson($history)->assertOk()->assertExactJson([]);
+        $this->getJson("/api/condominiums/{$b->id}/financial-history")->assertForbidden();
+
+        $incomeCategory = $this->postJson("$base/financial-categories", ['name' => 'Taxa', 'type' => 'income'])->json('id');
+        $expenseCategory = $this->postJson("$base/financial-categories", ['name' => 'Serviços', 'type' => 'expense'])->json('id');
+        $income = $this->postJson("$base/financial-transactions", [
+            'category_id' => $incomeCategory, 'direction' => 'income', 'amount' => '100000.15', 'due_date' => '2026-01-01',
+        ])->assertCreated()->json('id');
+        $expense = $this->postJson("$base/financial-transactions", [
+            'category_id' => $expenseCategory, 'direction' => 'expense', 'amount' => '200.10', 'due_date' => '2026-01-01',
+        ])->assertCreated()->json('id');
+        $this->getJson($history)->assertOk()->assertExactJson([]);
+        $paymentUrl = "$base/financial-transactions";
+        foreach ([
+            [$income, '100000.05', '2026-12-01 02:59:59'],
+            [$income, '0.10', '2026-12-01 03:00:00'],
+            [$expense, '100.00', '2026-11-15 12:00:00'],
+            [$expense, '100.10', '2026-12-15 12:00:00'],
+        ] as [$transaction, $amount, $date]) {
+            $this->postJson("$paymentUrl/$transaction/payments", [
+                'amount' => $amount, 'paid_at' => $date, 'payment_method' => 'pix',
+            ])->assertCreated();
+        }
+        FinancialPayment::create([
+            'transaction_id' => $income, 'amount' => '500.00', 'paid_at' => '2026-11-01',
+            'payment_method' => 'pix', 'status' => 'cancelled',
+        ]);
+
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->member($b), 'web');
+        $baseB = "/api/condominiums/{$b->id}";
+        $categoryB = $this->postJson("$baseB/financial-categories", ['name' => 'Taxa', 'type' => 'income'])->json('id');
+        $incomeB = $this->postJson("$baseB/financial-transactions", [
+            'category_id' => $categoryB, 'direction' => 'income', 'amount' => '50.00', 'due_date' => '2026-11-01',
+        ])->json('id');
+        $this->postJson("$baseB/financial-transactions/$incomeB/payments", [
+            'amount' => '50.00', 'paid_at' => '2026-11-01', 'payment_method' => 'pix',
+        ])->assertCreated();
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($manager, 'web');
+
+        $this->getJson($history)->assertOk()->assertExactJson([
+            ['month' => '2026-12', 'income' => '0.10', 'expense' => '100.10', 'balance' => '-100.00'],
+            ['month' => '2026-11', 'income' => '100000.05', 'expense' => '100.00', 'balance' => '99900.05'],
+        ]);
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($this->member($a, 'Morador'), 'web')->getJson($history)->assertForbidden();
+    }
+
+    public function test_financial_amounts_preserve_four_decimal_places_through_payments_and_history(): void
+    {
+        $condominium = $this->condominium('A');
+        $this->actingAs($this->member($condominium), 'web');
+        $base = "/api/condominiums/{$condominium->id}";
+        $category = $this->postJson("$base/financial-categories", ['name' => 'Receita geral', 'type' => 'income'])->json('id');
+        $transactions = "$base/financial-transactions";
+        $data = ['category_id' => $category, 'direction' => 'income', 'amount' => '100000.1234', 'due_date' => '2026-12-01'];
+        $id = $this->postJson($transactions, $data)->assertCreated()->assertJsonPath('balance', '100000.1234')->json('id');
+        $payment = ['amount' => '100000.1233', 'paid_at' => '2026-11-16 12:00:00', 'payment_method' => 'pix'];
+
+        $this->postJson("$transactions/$id/payments", $payment)->assertCreated()->assertJsonPath('amount', '100000.1233');
+        $this->getJson("$transactions/$id")->assertOk()->assertJsonPath('paid_amount', '100000.1233')->assertJsonPath('balance', '0.0001')->assertJsonPath('status', 'partial');
+        $this->postJson("$transactions/$id/payments", array_merge($payment, ['amount' => '0.0002']))->assertUnprocessable();
+        $this->postJson("$transactions/$id/payments", array_merge($payment, ['amount' => '0.00001']))->assertUnprocessable();
+        $this->postJson("$transactions/$id/payments", array_merge($payment, ['amount' => '0.0001']))->assertCreated();
+        $this->getJson("$transactions/$id")->assertOk()->assertJsonPath('paid_amount', '100000.1234')->assertJsonPath('balance', '0.00')->assertJsonPath('status', 'paid');
+        $this->getJson("$base/financial-history")->assertOk()->assertJsonPath('0.income', '100000.1234')->assertJsonPath('0.balance', '100000.1234');
+        $this->postJson($transactions, array_merge($data, ['amount' => '10000000000000.0000']))->assertUnprocessable();
+
+        $expenseCategory = $this->postJson("$base/financial-categories", ['name' => 'Despesa', 'type' => 'expense'])->json('id');
+        $expense = $this->postJson($transactions, array_merge($data, [
+            'category_id' => $expenseCategory, 'direction' => 'expense', 'amount' => '0.0001',
+        ]))->assertCreated()->json('id');
+        $this->postJson("$transactions/$expense/payments", array_merge($payment, ['amount' => '0.0001']))->assertCreated();
+        $this->getJson("$base/financial-history")->assertOk()->assertJsonPath('0.expense', '0.0001')->assertJsonPath('0.balance', '100000.1233');
+
+        foreach (range(1, 2) as $unused) {
+            $large = $this->postJson($transactions, array_merge($data, ['amount' => '9999999999999.9999']))
+                ->assertCreated()->assertJsonPath('balance', '9999999999999.9999')->json('id');
+            $this->postJson("$transactions/$large/payments", array_merge($payment, ['amount' => '9999999999999.9999']))->assertCreated();
+        }
+        $this->getJson("$base/financial-history")->assertOk()
+            ->assertJsonPath('0.income', '20000000100000.1232')->assertJsonPath('0.balance', '20000000100000.1231');
     }
 
     public function test_records_and_related_entities_cannot_cross_condominium_boundaries(): void

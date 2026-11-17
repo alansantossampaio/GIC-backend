@@ -12,7 +12,7 @@ class FinancialTransaction extends Model
 {
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2', 'due_date' => 'date'];
+        return ['amount' => 'decimal:4', 'due_date' => 'date'];
     }
 
     public function condominium(): BelongsTo

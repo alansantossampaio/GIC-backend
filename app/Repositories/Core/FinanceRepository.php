@@ -8,6 +8,7 @@ use App\Models\FinancialPayment;
 use App\Models\FinancialTransaction;
 use App\Repositories\Contracts\FinanceInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\LazyCollection;
 
 class FinanceRepository implements FinanceInterface
 {
@@ -46,6 +47,16 @@ class FinanceRepository implements FinanceInterface
         return $transaction->relationLoaded('payments')
             ? $transaction->payments
             : $transaction->payments()->orderBy('id')->get();
+    }
+
+    public function completedPayments(Condominium $condominium): LazyCollection
+    {
+        return FinancialPayment::query()
+            ->join('financial_transactions', 'financial_transactions.id', '=', 'financial_payments.transaction_id')
+            ->where('financial_transactions.condominium_id', $condominium->id)
+            ->where('financial_payments.status', 'completed')
+            ->select('financial_payments.*', 'financial_transactions.direction')
+            ->cursor();
     }
 
     public function createPayment(FinancialTransaction $transaction, array $data): FinancialPayment

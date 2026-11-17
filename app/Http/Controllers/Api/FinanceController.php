@@ -42,6 +42,13 @@ class FinanceController extends Controller
         return response()->json($this->finance->transactions($condominium)->map(fn ($transaction) => $this->finance->withBalance($transaction)));
     }
 
+    public function monthlyHistory(Request $request, Condominium $condominium): JsonResponse
+    {
+        $this->authorizeCondominium($request, $condominium);
+
+        return response()->json($this->finance->monthlyHistory($condominium));
+    }
+
     public function showTransaction(Request $request, Condominium $condominium, int $transaction): JsonResponse
     {
         $this->authorizeCondominium($request, $condominium);
@@ -92,6 +99,6 @@ class FinanceController extends Controller
 
     private function amountRules(): array
     {
-        return ['required', 'string', 'regex:/^(?:0|[1-9][0-9]{0,12})(?:\.[0-9]{1,2})?$/'];
+        return ['required', 'string', 'regex:/^(?:0|[1-9][0-9]{0,12})(?:\.[0-9]{1,4})?$/'];
     }
 }

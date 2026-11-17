@@ -11,7 +11,7 @@ class FinancialPayment extends Model
 {
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2', 'paid_at' => 'datetime'];
+        return ['amount' => 'decimal:4', 'paid_at' => 'datetime'];
     }
 
     public function transaction(): BelongsTo

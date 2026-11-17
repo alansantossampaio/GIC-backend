@@ -232,6 +232,10 @@ Execute as migrations pendentes, incluindo `2026_11_16_110000_add_type_to_occurr
 
 Pagamentos são registrados como `completed`; o lançamento passa de `open` para `partial` ou `paid`, conforme o saldo. A transação bloqueia o lançamento durante a validação e a gravação, impedindo pagamentos concorrentes acima do saldo em bancos que suportam bloqueio de linha. Registros históricos não são excluídos por estes endpoints. Estorno, cancelamento, juros, multas, advertências e sua integração financeira não fazem parte desta versão.
 
+`GET /api/condominiums/{condominium}/financial-history` retorna o histórico mensal do condomínio autorizado, em ordem decrescente: `month` (AAAA-MM), `income`, `expense` e `balance` (valores decimais em strings). O histórico é calculado a partir dos pagamentos persistidos com status `completed`, inclusive parciais, agrupados pelo mês de `paid_at` no fuso `America/Sao_Paulo`; inclui todas as categorias de receita e despesa. O saldo é a diferença entre receitas e despesas do próprio mês, não um acumulado. Lançamentos sem pagamento e meses sem movimentação não aparecem.
+
+Lançamentos e pagamentos aceitam valores positivos em strings decimais, com até 13 dígitos inteiros e quatro casas decimais, usando ponto decimal na API. Os cálculos preservam a precisão e o histórico exibe de duas a quatro casas decimais. A migration de ampliação da precisão é necessária antes da atualização da aplicação; sua reversão é recusada enquanto houver valores com mais de duas casas decimais não nulas.
+
 ## 13. Cadastro de condomínios
 
 O administrador da plataforma cadastra, inativa e reativa condomínios. Usuários com vínculo vigente e a permissão `condominios.editar` podem consultar e editar somente seus condomínios ativos; o administrador deve cadastrar e atribuir essa permissão na tela de acessos. A inativação preserva os registros e suspende os vínculos enquanto durar; não é possível conceder novos acessos ao condomínio inativo. Outros módulos futuros também deverão verificar a situação e o vínculo no servidor.
